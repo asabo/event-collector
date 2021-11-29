@@ -28,6 +28,7 @@ public class FileEventManagerImpl implements EventManager {
 	private static final Logger LOG = Log.getLogger(FileEventManagerImpl.class);
 
 	private static Map<String, Long> eventStarts = new HashMap<>();
+	private static Map<String, Long> eventEnds = new HashMap<>();
 
 	private ConcurrentLinkedQueue<InputEvent> eventQueue = new ConcurrentLinkedQueue<>();
 	private ScheduledExecutorService scheduledExecutorService;
@@ -37,7 +38,8 @@ public class FileEventManagerImpl implements EventManager {
 
 	private String storeFileName;
 
-	private boolean operational = false;
+	private boolean fileOpened = false;
+	private boolean storeLogsToFile = false;
 
 	private FileWriter fw;
 	private BufferedWriter bw;
@@ -53,33 +55,49 @@ public class FileEventManagerImpl implements EventManager {
 		this.mapper = mapper;
 		this.dbManager = dbManager;
 
-		this.storeFileName = this.properties.getProperty("result-file.name");
+		String storeFile = this.properties.getProperty("result-file.name");
 
-		this.fileWriteTask = this.scheduledExecutorService.scheduleAtFixedRate(() -> storeDataToFileSystem(), 1, 10,
-				TimeUnit.SECONDS);
-		LOG.info("FileEventManager instantiated, logs to be stored to:" + this.storeFileName);
+		if (storeFile != null) {
+			this.storeFileName = storeFile;
 
-		openFile();
+			this.fileWriteTask = this.scheduledExecutorService.scheduleAtFixedRate(() -> storeDataToFileSystem(), 1, 10,
+					TimeUnit.SECONDS);
+			LOG.info("FileEventManager instantiated, logs to be stored to: " + this.storeFileName);
+			openFile();
+			storeLogsToFile = true;
+		} else {
+			storeLogsToFile = false;
+		}
+
 	}
 
 	@Override
 	public void consume(ServerLogEvent event) {
 		LOG.info("ServerLogEvent came in: " + event);
-		eventQueue.add(event);
-
-		checkEventRunningTimes(event);
+		if (event != null) {
+			if (storeLogsToFile) {
+				eventQueue.add(event);
+			}
+			checkEventRunningTimes(event);
+		}
 	}
 
 	@Override
 	public void consume(InputEvent event) {
 		LOG.info("InputEvent came in: " + event);
-		eventQueue.add(event);
-		checkEventRunningTimes(event);
+		if (event != null) {
+			if (storeLogsToFile) {
+				eventQueue.add(event);
+			}
+			checkEventRunningTimes(event);
+		}
 	}
 
 	public void finalize() {
-		this.fileWriteTask.cancel(false);
-		this.closeFile();
+		if (this.storeLogsToFile) {
+			this.fileWriteTask.cancel(false);
+			this.closeFile();
+		}
 	}
 
 	private void openFile() {
@@ -87,7 +105,7 @@ public class FileEventManagerImpl implements EventManager {
 			fw = new FileWriter(this.storeFileName, true);
 			bw = new BufferedWriter(fw);
 			out = new PrintWriter(bw);
-			operational = true;
+			fileOpened = true;
 		} catch (IOException ioe) {
 			LOG.warn("Opening of logs file did not get initialized properly", ioe);
 		}
@@ -98,7 +116,7 @@ public class FileEventManagerImpl implements EventManager {
 			out.close();
 			bw.close();
 			fw.close();
-			operational = false;
+			fileOpened = false;
 		} catch (IOException ioe) {
 			LOG.warn("Closing of logs file did not get finished properly", ioe);
 		}
@@ -107,7 +125,7 @@ public class FileEventManagerImpl implements EventManager {
 	private void storeDataToFileSystem() {
 		int stores = 10_000;
 
-		while (operational && !eventQueue.isEmpty() && stores-- > 0) {
+		while (fileOpened && !eventQueue.isEmpty() && stores-- > 0) {
 			InputEvent event = eventQueue.poll();
 			try {
 				out.println(mapper.writeValueAsString(event));
@@ -119,21 +137,32 @@ public class FileEventManagerImpl implements EventManager {
 	}
 
 	/*
-	 * checks if event state is 'finished' and calculates duration of event. If event is longer 
-	 * than proposed threshold, fact would get stored to db
+	 * checks if event state is 'started' or 'finished' and calculates duration of
+	 * event. If event is longer than proposed threshold, fact will get stored to db
 	 */
 	private void checkEventRunningTimes(InputEvent event) {
-		if (event.getState().equals(State.STARTED)) {
+		State eventState = event.getState();
+		if (State.STARTED.equals(eventState)) {
 			eventStarts.put(event.getId(), event.getTimestamp());
+		} else if (State.FINISHED.equals(eventState)) {
+			eventEnds.put(event.getId(), event.getTimestamp());
 		} else {
-			long started = eventStarts.get(event.getId());
-			long finished = event.getTimestamp();
+			LOG.warn("Unrecognized state came in for InputEvent " + event.getId() + " state: " + eventState);
+		}
+		consumeEventIfComplete(event);
+	}
+
+	private void consumeEventIfComplete(InputEvent event) {
+		String eventId = event.getId();
+		if (eventStarts.containsKey(eventId) && eventEnds.containsKey(eventId)) {
+			long started = eventStarts.get(eventId);
+			long finished = eventEnds.get(eventId);
 
 			int duration = (int) (finished - started);
 			if (duration > 4) {
 				// log to DB
 				EventStats es = new EventStats();
-				es.setId(event.getId());
+				es.setId(eventId);
 				es.setAlert(true);
 				es.setDuration(duration);
 
@@ -141,10 +170,11 @@ public class FileEventManagerImpl implements EventManager {
 					ServerLogEvent sl = (ServerLogEvent) event;
 					es.setHost(sl.getHost());
 					es.setType(sl.getType());
-				}  
+				}
 
 				dbManager.storeEventStats(es);
-				eventStarts.remove(event.getId());
+				eventStarts.remove(eventId);
+				eventEnds.remove(eventId);
 			}
 		}
 	}

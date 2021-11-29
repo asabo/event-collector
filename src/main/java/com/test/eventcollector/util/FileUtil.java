@@ -111,7 +111,7 @@ public final class FileUtil {
 				res.add(line);
 			}
 		} catch (IOException e) {
-			LOG.info("Exception in reasdTextFile", e);
+			LOG.info("Exception in readTextFile", e);
 			return null;
 		}
        return res;

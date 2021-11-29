@@ -36,10 +36,10 @@ import com.test.eventcollector.util.PropertiesReader;
  *
  * @author ante
  */
-public final class LogCollectorRestResourceConfig extends ResourceConfig {
-	private static final Logger LOG = Log.getLogger(LogCollectorRestResourceConfig.class);
+public final class EventCollectorRestResourceConfig extends ResourceConfig {
+	private static final Logger LOG = Log.getLogger(EventCollectorRestResourceConfig.class);
 	
-	public LogCollectorRestResourceConfig() {
+	public EventCollectorRestResourceConfig() {
 
 		// where the resource classes are
 

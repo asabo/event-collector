@@ -218,7 +218,7 @@
 					</descriptorRefs>
 					<archive>
 						<manifest>
-							<mainClass>com.test.eventcollector.app.EventCollectorApp</mainClass>
+							<mainClass>com.test.eventcollector.app.EventCollectorRestApp</mainClass>
 						</manifest>
 					</archive>
 				</configuration>

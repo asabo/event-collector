@@ -22,10 +22,10 @@ import org.glassfish.jersey.servlet.ServletContainer;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.graphite.GraphiteReporter;
 import com.codahale.metrics.servlets.MetricsServlet;
-import com.test.eventcollector.rest.resource.LogCollectorRestResourceConfig;
+import com.test.eventcollector.rest.resource.EventCollectorRestResourceConfig;
 
-public final class EventCollectorApp {
-	private static final Logger LOG = Log.getLogger(EventCollectorApp.class);
+public final class EventCollectorRestApp {
+	private static final Logger LOG = Log.getLogger(EventCollectorRestApp.class);
 
 	private Server server;
 
@@ -48,8 +48,8 @@ public final class EventCollectorApp {
 
 	public void setup() {
 		long now = System.currentTimeMillis();
-		LogCollectorRestResourceConfig resourceConfig = new LogCollectorRestResourceConfig();
-		props = LogCollectorRestResourceConfig.properties();
+		EventCollectorRestResourceConfig resourceConfig = new EventCollectorRestResourceConfig();
+		props = EventCollectorRestResourceConfig.properties();
 
 		serverPort = getIntProperty("app.port");
 		appName = props.getProperty("app.name");
@@ -98,7 +98,7 @@ public final class EventCollectorApp {
 
 		// here we will hold start page for our web service, should it have to serve
 		// some public pages (index.html with some basic info for beginning)
-		String webDir = EventCollectorApp.class.getClassLoader().getResource("webapp").toExternalForm();
+		String webDir = EventCollectorRestApp.class.getClassLoader().getResource("webapp").toExternalForm();
 		WebAppContext webApp = new WebAppContext();
 		webApp.setResourceBase(webDir);
 		webApp.setContextPath("/" + appName + "/html");
@@ -110,7 +110,7 @@ public final class EventCollectorApp {
 		ServletContextHandler statsServlet = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
 		statsServlet.setContextPath("/" + appName + "/stats");
 
-		statsServlet.addServlet(new ServletHolder(new MetricsServlet(LogCollectorRestResourceConfig.metrics())), "/*");
+		statsServlet.addServlet(new ServletHolder(new MetricsServlet(EventCollectorRestResourceConfig.metrics())), "/*");
 		handlers.addHandler(statsServlet);
 
 		// rest services will live under '/' and all classes serving them will
@@ -133,9 +133,9 @@ public final class EventCollectorApp {
 
 	}// setup
 
-	private void startGraphite(LogCollectorRestResourceConfig resourceConfig) {
-		MetricRegistry registry = LogCollectorRestResourceConfig.metrics();
-		Properties properties = LogCollectorRestResourceConfig.properties();
+	private void startGraphite(EventCollectorRestResourceConfig resourceConfig) {
+		MetricRegistry registry = EventCollectorRestResourceConfig.metrics();
+		Properties properties = EventCollectorRestResourceConfig.properties();
 
 		graphiteReporter = resourceConfig.graphiteReporting(registry, properties);
 
@@ -174,7 +174,7 @@ public final class EventCollectorApp {
 
 	public static void main(String args[]) throws Exception {
 
-		EventCollectorApp theServer = new EventCollectorApp();
+		EventCollectorRestApp theServer = new EventCollectorRestApp();
 		theServer.setup();
 		theServer.start();
 

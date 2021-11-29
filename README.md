@@ -1,11 +1,13 @@
 # Event Collector
-Event Collector is RESTful app in charge of collecting log events from different sources
+Event Collector is RESTful app in charge of collecting log events from different sources and store anomalies to a database. 
+
+There are 2 ways application can be used. First, you can call java application passing it log file name and application will parse all logs in file, or you can spin up REST service application an feed logs one by one using REST interface. 
+
 
 tools
 
 `java`
 `maven`
-
 
 building app: 
 
@@ -16,10 +18,17 @@ maven will download all needed dependencies and build binary
 
 resulting application binary will be created in single file `target/EventCollector-1.0.0-SNAPSHOT-jar-with-dependencies.jar`
 
-application can be run with: 
+Java application can be run 
+
+REST service application can be run with: 
 `java -jar target/EventCollector-1.0.0-SNAPSHOT-jar-with-dependencies.jar`
 
-Should application need to be configured, one can make `properties` folder in place of running application and store inside 1 file: 
+Java Application can be run: 
+`java -cp target/EventCollector-1.0.0-SNAPSHOT-jar-with-dependencies.jar  com.test.eventcollector.app.EventCollectorApplication <fileName>`
+
+`<fileName>` param must be set as it represents file that should get read and parsed.
+
+Should REST application need to be configured, one can make `properties` folder in place of running application and store inside 1 file: 
 
 `event-collector.config` - application configuration properties
 

@@ -4,7 +4,6 @@ public final class ServerLogEvent extends InputEvent {
 	private String type;
 	private String host;
 
-
 	public String getType() {
 		return type;
 	}

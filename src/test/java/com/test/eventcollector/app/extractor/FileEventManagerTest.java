@@ -24,7 +24,7 @@ import com.test.eventcollector.manager.EventManager;
 import com.test.eventcollector.manager.FileEventManagerImpl;
 import com.test.eventcollector.manager.HsqlDbManager;
 import com.test.eventcollector.manager.HsqlDbManagerImpl;
-import com.test.eventcollector.rest.resource.LogCollectorRestResourceConfig;
+import com.test.eventcollector.rest.resource.EventCollectorRestResourceConfig;
 import com.test.eventcollector.util.FileUtil;
 
 class FileEventManagerTest {
@@ -58,12 +58,13 @@ class FileEventManagerTest {
 		inputEvent.setTimestamp(NOW+3);
 		inputEvent.setState(STATE_FINISHED);
 		
-		ScheduledExecutorService scheduler = LogCollectorRestResourceConfig.schedulerService();
+		ScheduledExecutorService scheduler = EventCollectorRestResourceConfig.schedulerService();
 		Properties properties = new Properties();
 		properties.put("result-file.name", TEST_LOGFILE);
-		mapper = LogCollectorRestResourceConfig.jacksonObjectMapper();
+		mapper = EventCollectorRestResourceConfig.jacksonObjectMapper();
 		
-		hsqlDbManager = new HsqlDbManagerImpl();
+		//should mock this class, but it's easier  to query data directly and verify them stored, TODO mock this class
+		hsqlDbManager =  new HsqlDbManagerImpl();
 
 		fileEventManager = new FileEventManagerImpl(scheduler, hsqlDbManager, properties, mapper);
 	}
